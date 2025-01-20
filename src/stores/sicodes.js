@@ -2,36 +2,45 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const sicodeStore = defineStore('sicodes', () => {
+  const act_sep = ref(false)
+  const act_mult = ref(false)
+  const pantalla = ref(0)  //0=No hay pedidos, 
+  //1=pedidos asignados *no va ya 
+  //2-selecccion items pedidos asignados, 
+  //3=pedidos multiples. *no va ya
+  //4=selecccion items pedidos multiples
+  const lst_mensajes = ref("No hay pedidos")
+  const procesando = ref(false)
 
   const parametros = ref(null)
-  const lst_pedidos = ref(null)
+  const lst_pedidos = ref([])
   const id_pedido = ref(0)
   const ped_actual = ref(null)
   const lst_item = ref([])
   const item_actual = ref(null)
   const rutas = ref([])
-  const lst_otra=ref([])
+  const lst_otra = ref([])
   //modal
   const agrupacion = ref(0)
   const parcial = ref(false)
   const modal_otra_ub = ref(false)
+  const modal_limite = ref(false)
   //contedores
   const conitems = ref(true)
   const id_contenedor = ref(0)
   const id_canastilla = ref(0)
   //control
   const codbar_ok = ref(false)
-  const actdev = ref(false)
   //Pedidos Multiples
-  const mult_idpedido=ref(0)
-  const mult_pedidos=ref([])
-  const mult_items=ref([])
-  const mult_Activo=ref(false)
-  const mult_actvarCant=ref(false)
-  const mult_item=ref({})
-  const mul_lineasPend=ref(0)
+  const mult_idpedido = ref(0)
+  const mult_pedidos = ref([])
+  const mult_items = ref([])
+  const mult_actvarCant = ref(false)
+  const mult_item = ref({})
+  const mul_lineasPend = ref(0)
 
   async function FunGet(url) {
+    procesando.value = true
     let error = ''
     let mensaje = ''
     let registros = []
@@ -40,16 +49,16 @@ export const sicodeStore = defineStore('sicodes', () => {
     console.log(ruta)
     try {
       const response = await fetch(ruta);
-
       if (!response.ok) {
         throw new Error(`Error: ${response.status} - ${response.statusText}`);
+        procesando.value = false
       }
       data = await response.json()
       if (data) {
-        // console.log('DATA',data)
-        mensaje = data.mensaje ?? null
+        lst_mensajes.value = data.mensaje ?? null
         registros = data.registros ?? []
         error = data.error ?? null
+        procesando.value = false
         // console.log('---------------')
         // console.log(error)
         // console.log(mensaje)
@@ -57,11 +66,13 @@ export const sicodeStore = defineStore('sicodes', () => {
         // console.log('---------------')
       }
     } catch (err) {
+      procesando.value = false
       error = err.message || 'Ha ocurrido un error al obtener los datos.';
     }
     return { error, mensaje, registros };
   }
   async function FunPost(url, body = {}) {
+    procesando.value = true
     let error = '';
     let mensaje = '';
     let registros = [];
@@ -69,43 +80,47 @@ export const sicodeStore = defineStore('sicodes', () => {
     const ruta = `${RUTA_WEB2PY}/${url}`;
     console.log(ruta);
     try {
-        const response = await fetch(ruta, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json', // Define que el cuerpo es JSON
-            },
-            body: JSON.stringify(body), // Convierte el objeto body a una cadena JSON
-        });
+      const response = await fetch(ruta, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // Define que el cuerpo es JSON
+        },
+        body: JSON.stringify(body), // Convierte el objeto body a una cadena JSON
+      });
 
-        if (!response.ok) {
-            throw new Error(`Error: ${response.status} - ${response.statusText}`);
-        }
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+        procesando.value = false
+      }
 
-        data = await response.json();
-        if (data) {
-            mensaje = data.mensaje ?? null;
-            registros = data.registros ?? [];
-            error = data.error ?? null;
-        }
+      data = await response.json();
+      if (data) {
+        lst_mensajes.value = data.mensaje ?? null;
+        registros = data.registros ?? [];
+        error = data.error ?? null;
+        procesando.value = false
+      }
     } catch (err) {
-        error = err.message || 'Ha ocurrido un error al enviar los datos.';
+      error = err.message || 'Ha ocurrido un error al enviar los datos.';
+      procesando.value = false
     }
 
     return { error, mensaje, registros };
-}
+  }
+
   async function CarguePedidos() {
     const { error, mensaje, registros } = await FunGet(`api_separar/BuscarPedidos`)
     if (error) { alert(error) }
     if (mensaje) { alert(mensaje) }
-    // console.log(registros)
     if (registros.length == 0) {
       lst_pedidos.value = []
       rutas.value = []
+      act_sep.value = false
     } else {
       lst_pedidos.value = registros.pedidos
       rutas.value = registros.rutas
-      parametros.value = registros.params
-      actdev.value = registros.params.actDev
+      act_sep.value = true
+
     }
   }
   async function CargarItems(idpedido) {
@@ -114,11 +129,11 @@ export const sicodeStore = defineStore('sicodes', () => {
       alert(error)
       return
     }
-    if (mensaje) { alert(mensaje) }
 
     // console.log('CargarItems -> reg=')
     if (registros) {
-      // console.log(registros.primero)    
+      act_sep.value = false
+      act_mult.value = false
       if (registros.primero) {
         // console.log('registros.primero')
         item_actual.value = registros.primero
@@ -130,6 +145,7 @@ export const sicodeStore = defineStore('sicodes', () => {
       }
     }
   }
+
   function MuestreContenedor() {
     if (parametros.value.actCanastillas) { agrupacion.value = 1 }    //muestre SepGrupoTotal canstilla 
     else { agrupacion.value = 2 }                                    //muestre SepGrupoTotal sin canstilla
@@ -154,18 +170,19 @@ export const sicodeStore = defineStore('sicodes', () => {
       return true
     } else {
       alert('error grave no se puede verificar los contendores...!!')
-      return false 
+      return false
     }
   }
-  async function BuscarParametros(){
+  async function BuscarParametros() {
     let { error, mensaje, registros } = await FunGet(`api_separar/BuscarParametros`)
-    if (error) { alert(error) }
-    if (mensaje) { alert(mensaje) }
+    if (error) {
+      alert(error)
+      return
+    }
     console.log("----BuscarParametros------")
     console.log(registros)
-    console.log ( parametros.value)
-    parametros.value=registros
-
+    console.log(parametros.value)
+    parametros.value = registros
   }
 
   async function SelPedido(idpedido) {
@@ -211,19 +228,19 @@ export const sicodeStore = defineStore('sicodes', () => {
     }
   }
   async function ValidaCodigo(codbar) {
-    let ruta=""
-    if (parametros.value.ref_item){
-      if ( codbar==item_actual.value.codigo ){
+    let ruta = ""
+    if (parametros.value.ref_item) {
+      if (codbar == item_actual.value.codigo) {
         codbar_ok.value = true
         return
       }
-      ruta=`api_separar/BuscarCodbar/${codbar}/${item_actual.value.codigo}/${item_actual.value.um}`
-    }else{
-      if (codbar==item_actual.value.ref){
+      ruta = `api_separar/BuscarCodbar/${codbar}/${item_actual.value.codigo}/${item_actual.value.um}`
+    } else {
+      if (codbar == item_actual.value.ref) {
         codbar_ok.value = true
         return
       }
-      ruta=`api_separar/BuscarCodbar/${codbar}/${item_actual.value.ref}/${item_actual.value.um}`
+      ruta = `api_separar/BuscarCodbar/${codbar}/${item_actual.value.ref}/${item_actual.value.um}`
     }
     const { error, mensaje, registros } = await FunGet(ruta)
 
@@ -344,11 +361,12 @@ export const sicodeStore = defineStore('sicodes', () => {
       conitems.value = false
       MuestreContenedor()
     }
-gg  }
+    gg
+  }
 
- async function OtrasUbicaciones() {
+  async function OtrasUbicaciones() {
     console.log(item_actual)
-    const datos=`?ref=${item_actual.value.ref}&ubi=${item_actual.value.ubicacion}`
+    const datos = `?ref=${item_actual.value.ref}&ubi=${item_actual.value.ubicacion}`
     const ruta = `api_separar/BuscarOtrasUbicaciones/${datos}`
     // console.log(ruta)
     const { error, mensaje, registros } = await FunGet(ruta)
@@ -360,7 +378,7 @@ gg  }
       alert(error)
       return
     }
-    lst_otra.value=registros
+    lst_otra.value = registros
   }
 
   //Pedidos Multiples
@@ -369,87 +387,130 @@ gg  }
     const { error, mensaje, registros } = await FunGet(`api_mult_separar/BuscarPedidos`)
     if (error) { alert(error) }
     if (mensaje) { alert(mensaje) }
-    console.log(registros)
     if (registros.length == 0) {
       mult_pedidos.value = []
+      act_mult.value = false
     } else {
       mult_pedidos.value = registros
+      act_mult.value = true
+
     }
   }
 
-  async function Mult_CargueItems(idpedido) {
 
-    const { error, mensaje, registros } = await FunPost(`api_mult_separar/BuscarItems`,{id:idpedido})
-    mult_items.value =registros
-  }
 
   async function Mult_SelPedido(idpedido) {
     mult_idpedido.value = idpedido
-    mult_Activo.value=true
+    pantalla.value = 4
+    act_mult.value = false
+    act_sep.value = false
 
-    const { error, mensaje, registros } = await FunPost(`api_mult_separar/BuscarItems`,{id:idpedido})
-    mult_items.value =registros
+    const { error, mensaje, registros } = await FunPost(`api_mult_separar/BuscarItems`, { id: idpedido })
+    mult_items.value = registros
     mul_lineasPend.value = registros.length
-
-
   }
 
-async function Mult_itemSeparado(referencia) {
-  const itemEncontrado = mult_items.value.find(item => item.referencia === referencia);
-  if (!itemEncontrado) {
-    alert('Referencia no encontrada');
-    return;
-  }
-  //Activa el campo de cantidad
-  if (itemEncontrado.maximo){
-      mult_actvarCant.value=true
-      mult_item.value=itemEncontrado
+  async function Mult_itemSeparado(referencia) {
+    console.log("mult_itemsep")
+    mult_item.value = mult_items.value.find(item => item.referencia === referencia);
+    console.log(mult_item.value)
+    if (typeof mult_item.value === 'undefined') {
+      alert('Referencia no encontrada');
+      return;
+    }
+    if ((mult_item.value.cantped - (mult_item.value.cansep1 + mult_item.value.cant_add + 1)) < 0) {
+      modal_limite.value = true
       return
-  }
-  const datos = { id: itemEncontrado.id, cantidad: 1 };
-  mult_Guardar(datos, itemEncontrado)
-}
+    }
 
-async function Mult_ItemCantSep(cantidad){
-    const datos  = { id: mult_item.id, cantidad: cantidad }
-    await mult_Guardar(datos, mult_item)
+
+    ////Activa el campo de cantidad
+    //if (modal_limite.value.maximo) {
+    //  mult_actvarCant.value = true
+    //  return
+    //}
+
+    const datos = { id: mult_item.value.id, cantidad: 1 };
+    mult_Guardar(datos)
+  }
+
+  async function Mult_ItemCantSep(cantidad) {
+    const datos = { id: mult_item.value.id, cantidad: cantidad }
+    await mult_Guardar(datos)
     LimpiarMult()
   }
 
-async function mult_Guardar(datos, itemEncontrado) {
-  const { error, mensaje, registros } = await FunPost('api_mult_separar/SepararItems', datos);
+  async function mult_Guardar(datos) {
+    const { error, mensaje, registros } = await FunPost('api_mult_separar/SepararItems', datos);
 
-  if (error) {
-    alert(error);
-    return;
-  }
-
-  if (registros) {
-    // Actualiza el valor del ítem
-    itemEncontrado.cansep1 = registros.cant;
-
-    // Mueve el ítem al principio de la lista
-    const index = mult_items.value.indexOf(itemEncontrado);
-    if (index !== -1) {
-      mult_items.value.splice(index, 1);
-      mult_items.value.unshift(itemEncontrado);
+    if (error) {
+      alert(error);
+      return;
     }
 
-    // Activa el efecto de resaltado
-    itemEncontrado.resaltado = true;
-    // ya fue separado
-    itemEncontrado.separada = registros.estado
-    mul_lineasPend.value  = mult_items.value.filter(item => item.cantped > item.cansep1).length
+    if (registros) {
+      // Actualiza el valor del ítem
+      mult_item.value.cansep1 = registros.cant;
+
+      // Mueve el ítem al principio de la lista
+      const index = mult_items.value.indexOf(mult_item.value);
+      if (index !== -1) {
+        mult_items.value.splice(index, 1);
+        mult_items.value.unshift(mult_item.value);
+      }
+
+      // Activa el efecto de resaltado
+      mult_item.value.resaltado = true;
+      // ya fue separado
+      mult_item.value.separada = registros.estado
+      mul_lineasPend.value = mult_items.value.filter(item => item.cantped > item.cansep1).length
+
+    }
+  }
+
+  function LimpiarMult() {
+    mult_item.value = {}
+    mult_actvarCant.value = false
+  }
+
+
+  async function mult_GuardarAdcional(cantidad) {
+    const datos = { cantidad: cantidad, id: mult_item.value.id }
+    const { error } = await FunPost('api_mult_separar/GuardarAdcional', datos);
+    if (error) {
+      alert(error)
+      return
+    }
+
+    mult_item.value = mult_items.value.find(item => item.referencia === referencia);
+    mult_item.value.cant_add = cantidad
 
   }
-}
 
-function LimpiarMult(){
-    mult_item.value={}
-    mult_actvarCant.value=false
-}
+  async function mult_FinalizarItem(id_item, index) {
+    const datos = { id: id_item }
+    const { error } = await FunPost('api_mult_separar/FinalizarItem', datos);
+    if (error) {
+      alert(error)
+      return
+    }
+    mult_items.value[index].separada = true
+
+  }
+
+  // Función para reorganizar la lista y dejar de ultimos lo que estan en verde
+  function Mult_OrdenarLista() {
+    mult_items.value = [
+      ...mult_items.value.filter((item) => !item.separada), // Los que tienen fin=false
+      ...mult_items.value.filter((item) => item.separada),  // Los que tienen fin=true
+    ]
+    return !mult_items.value.some((item) => !item.separada);
+
+  }
+
 
   function Inicio() {
+    pantalla.value = 0
     codbar_ok.value = false
     agrupacion.value = 0
     id_contenedor.value = 0
@@ -460,25 +521,31 @@ function LimpiarMult(){
     lst_pedidos.value = []
     lst_item.value = []
     item_actual.value = null
+    act_sep.value = false
+    act_mult.value = false
+    modal_limite.value = false
+    mult_idpedido.value = 0
+    BuscarParametros()
     CarguePedidos()
     Mult_CarguePedidos()
   }
 
-  
-
   return {
-    parametros, lst_pedidos, id_pedido, agrupacion, conitems, actdev,
+    parametros, lst_pedidos, id_pedido, agrupacion, conitems,
     id_contenedor, id_canastilla, ped_actual, lst_item, item_actual,
-    codbar_ok, parcial, Guardar, Inicio, rutas,lst_otra,modal_otra_ub,
+    codbar_ok, parcial, Guardar, Inicio, rutas, lst_otra, modal_otra_ub,
+    //control
+    pantalla, lst_mensajes, act_sep, act_mult, procesando,
 
     //funciones
     CarguePedidos, SelPedido, AsignarCasilla, AsignarContendor, Siguiente,
-    ValidaCodigo, NuevoContenedor,OtrasUbicaciones,
-     //Multiples
-    mult_pedidos, mult_items, mult_idpedido, mult_Activo, mult_actvarCant,
-    mult_item, mul_lineasPend,
+    ValidaCodigo, NuevoContenedor, OtrasUbicaciones, BuscarParametros,
+    //Multiples
+    mult_pedidos, mult_items, mult_idpedido, mult_actvarCant,
+    mult_item, mul_lineasPend, modal_limite,
     //fun Multiples
     Mult_CarguePedidos, Mult_SelPedido, Mult_itemSeparado, LimpiarMult,
-    Mult_ItemCantSep,
+    Mult_ItemCantSep, mult_GuardarAdcional, Mult_OrdenarLista,
+    mult_FinalizarItem
   }
 })

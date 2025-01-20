@@ -1,23 +1,14 @@
 <template>
-  <!-- modals -->
+  <MarcadordeCarga v-if="dataStore.procesando" />
+   <!-- modals -->
   <ModalParcial v-if="dataStore.parcial" />
   <ModalGrupoTotal v-if="dataStore.agrupacion > 0 && dataStore.agrupacion < 3" />
+  <ModalLimiteAdicional v-if= "dataStore.modal_limite" />
   <!-- componentes -->
+ <BarraMensajes />
+  <SeleccionPedido v-if="dataStore.act_sep" />
 
-  <div>
-    <!-- Botón que dispara el mensaje flotante 
-
-    <button @click="showFloatingMessage">Mostrar mensaje</button>
-    -->
-
-    <!-- Mostrar el mensaje flotante cuando se activa el evento -->
-    <FloatingMessage ref="floatingMessage" message="¡Evento activado! ¡Mensaje flotante!" />
-  </div>
-
-  <SeleccionPedido v-if="dataStore.id_pedido == 0  && dataStore.mult_Activo==false" />
-  <!--
-  SeleccionPedidoMul v-if="dataStore.mult_pedidos.length > 0 && dataStore.mult_Activo==false "/>
-  -->
+  <SeleccionPedidoMul class="mt-2" v-if="dataStore.act_mult"/>
   <div class="d-flex justify-content-between">
     <BarraComandos v-if="dataStore.id_contenedor > 0 " />
   </div>
@@ -30,10 +21,10 @@
     </div>
   </div>
   
-  <Mult_Separacion v-if="dataStore.mult_Activo" />
   <SepPedientes v-if="dataStore.lst_item.length > 0" />
 
-  <VerDev v-if="dataStore.actdev" />
+  <Mult_Separacion v-if="dataStore.pantalla==4" />
+
   <div>
       version 4.0.0
       <Recargar />
@@ -44,7 +35,9 @@
 <script setup>
 import { onMounted } from 'vue'
 import { sicodeStore } from '@/stores/sicodes'
-import FloatingMessage from './components/FloatingMessage.vue'
+import MarcadordeCarga from './components/MarcadordeCarga.vue'
+import ModalLimiteAdicional from './components/ModalLimiteAdicional.vue'
+import BarraMensajes from './components/BarraMensajes.vue'
 import SeleccionPedido from './components/SeleccionPedido.vue'
 import SeleccionPedidoMul from './components/SeleccionPedidoMul.vue'
 import Mult_Separacion from './components/Mult_Separacion.vue'
@@ -60,12 +53,8 @@ const dataStore = sicodeStore()
 
 
 onMounted(() => {
-  dataStore.CarguePedidos()
-  dataStore.Mult_CarguePedidos()
+ dataStore.Inicio() 
 })
-
-
-
 
 </script>
 
