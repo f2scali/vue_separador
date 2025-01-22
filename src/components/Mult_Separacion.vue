@@ -55,10 +55,10 @@
           <th class="sticky-header sticky-column">Referencia</th>
           <th class="sticky-header">Descripción</th>
           <th class="sticky-header">Marca</th>
-          <th class="sticky-header">Und. Med</th>
-          <th class="sticky-header">Pedida</th>
-          <th class="sticky-header">Separada</th>
-          <th class="sticky-header">Adicional</th>
+          <th class="sticky-header">Unid.</th>
+          <th class="sticky-header">Comp.</th>
+          <th class="sticky-header">Sepa.</th>
+          <th class="sticky-header">Adic.</th>
         </tr>
       </thead>
       <tbody>
@@ -86,7 +86,7 @@
           <td>{{ item.decripcion }}</td>
           <td>{{ item.marca }}</td>
           <td>{{ item.um }}</td>
-          <td>{{ item.cantped }}</td>
+          <td>{{ item.catcomp	 }}</td>
           <td>{{ item.cansep1 }}</td>
           <td>{{ item.cant_add }}</td>
         </tr>
@@ -108,10 +108,26 @@ const nroPedido=ref('Nro')
 
 let intervalo = null
 
+// Función para reproducir el sonido
+const playBeep = () => {
+  const audio = new Audio('public/audio/store-scanner-beep-90395.mp3'); // Ruta del archivo de sonido
+  audio.play().catch((error) => {
+    console.error('Error al reproducir el sonido:', error);
+  });
+};
 
+
+// Función opcional para reproducir el beep cuando se recibe un código
+const onBarcodeScanned = (barcode) => {
+  playBeep()
+  // Aquí puedes agregar la lógica adicional para manejar el código escaneado
+  console.log('Código escaneado:', barcode)
+}
 //Envio 
 const VerficarCodigo = async () => {
+  playBeep();
   await dataStore.Mult_itemSeparado(CodBarItem.value);
+
   if (dataStore.mult_actvarCant){
     ActCantidad.value=true
     CantItem.value=1
@@ -121,7 +137,7 @@ const VerficarCodigo = async () => {
 };
 //cantidad ingresas manual con el item especial.....
 const EnvioCantidad = async () =>{
-  const calculo = dataStore.mult_item.cantped - dataStore.mult_item.cansep1
+  const calculo = dataStore.mult_item.catcomp	 - dataStore.mult_item.cansep1
   if (CantItem.value > calculo ){
     alert(`No se puede ingresar una cantidad mayor a ${calculo}`)
     return
@@ -218,7 +234,9 @@ td {
 .sticky-header {
   position: sticky;
   top: 0; /* Se queda en la parte superior al hacer scroll */
-  background: #f8f9fa; /* Fondo para distinguir los encabezados */
+  background: #2011dd; /* Fondo para distinguir los encabezados */
+  color:#ffffff;
+  text-align: center;
   z-index: 3; /* Mayor prioridad que las columnas */
 }
 
@@ -226,8 +244,11 @@ td {
 .sticky-column {
   position: sticky;
   left: 0; /* Se queda en el lado izquierdo al hacer scroll */
-  background: #f8f9fb; /* Fondo blanco para que destaque */
+  background: #9a93f3; /* Fondo blanco para que destaque */
   z-index: 2; /* Menor prioridad que los encabezados */
+  text-align: center;
+  color:#ffffff;
+
 }
 
 /* Segunda columna fija */

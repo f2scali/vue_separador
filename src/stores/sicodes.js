@@ -285,10 +285,8 @@ export const sicodeStore = defineStore('sicodes', () => {
     console.log('item_actual')
     console.log(item_actual)
     console.log(item_actual.value.separada == 0)
-    // alert('aqui comienza')
 
     if (item_actual.value.separada == 0) {
-      // alert('aqui estoy')
       console.log(`lst_item.value.length=${lst_item.value.length}`)
       if (lst_item.value.length === 0) {  //si no hay mas pendientes 
         await CierreContenedor()
@@ -412,23 +410,22 @@ export const sicodeStore = defineStore('sicodes', () => {
 
   async function Mult_itemSeparado(referencia) {
     console.log("mult_itemsep")
-    mult_item.value = mult_items.value.find(item => item.referencia === referencia);
+    mult_item.value = mult_items.value.find(item => item.referencia === referencia)
+
+
+    if (mult_item.value.cant_add > 0) {
+      alert("Este item ya se encuentra en su totalidad separado,no se ingresa cantidad")
+      return
+    }
     console.log(mult_item.value)
     if (typeof mult_item.value === 'undefined') {
       alert('Referencia no encontrada');
       return;
     }
-    if ((mult_item.value.cantped - (mult_item.value.cansep1 + mult_item.value.cant_add + 1)) < 0) {
+    if ((mult_item.value.catcomp - (mult_item.value.cansep1 + mult_item.value.cant_add + 1)) < 0) {
       modal_limite.value = true
       return
     }
-
-
-    ////Activa el campo de cantidad
-    //if (modal_limite.value.maximo) {
-    //  mult_actvarCant.value = true
-    //  return
-    //}
 
     const datos = { id: mult_item.value.id, cantidad: 1 };
     mult_Guardar(datos)
@@ -463,7 +460,7 @@ export const sicodeStore = defineStore('sicodes', () => {
       mult_item.value.resaltado = true;
       // ya fue separado
       mult_item.value.separada = registros.estado
-      mul_lineasPend.value = mult_items.value.filter(item => item.cantped > item.cansep1).length
+      mul_lineasPend.value = mult_items.value.filter(item => item.catcomp > item.cansep1).length
 
     }
   }
@@ -482,8 +479,11 @@ export const sicodeStore = defineStore('sicodes', () => {
       return
     }
 
-    mult_item.value = mult_items.value.find(item => item.referencia === referencia);
+    //mult_item.value = mult_items.value.find(item => item.id === mult_item.value.id)
+
     mult_item.value.cant_add = cantidad
+    console.log(mult_item.value)
+    console.log(mult_items.value)
 
   }
 
@@ -508,6 +508,18 @@ export const sicodeStore = defineStore('sicodes', () => {
 
   }
 
+  async function mult_Separados(datos) {
+    const { error, mensaje, registros } = await FunPost('api_mult_separar/BuscarItemSep', datos);
+
+    if (error) {
+      alert(error);
+      return;
+    }
+
+    if (registros) {
+      lst_item.push(registros)
+    }
+  }
 
   function Inicio() {
     pantalla.value = 0
@@ -546,6 +558,6 @@ export const sicodeStore = defineStore('sicodes', () => {
     //fun Multiples
     Mult_CarguePedidos, Mult_SelPedido, Mult_itemSeparado, LimpiarMult,
     Mult_ItemCantSep, mult_GuardarAdcional, Mult_OrdenarLista,
-    mult_FinalizarItem
+    mult_FinalizarItem, mult_Separados
   }
 })

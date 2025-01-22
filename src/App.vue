@@ -26,7 +26,7 @@
   <Mult_Separacion v-if="dataStore.pantalla==4" />
 
   <div>
-      version 4.0.0
+      version 4.0.2
       <Recargar />
     </div>
 </template>

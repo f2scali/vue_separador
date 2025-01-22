@@ -10,7 +10,7 @@
                 <div class="card-body">
                   <div class="d-flex">
                     <div class="mr-3 mt-2 text-center" v-show="!adicionarSi" >
-                      Desea adicionar una catidad mas? 
+                      Desea adicionar una cantidad mas? 
                       <button class="btn btn-danger mr-3" @click="MuestreSi">Si</button>
                       <button class="btn btn-primary" @click="cerrarModal">No</button>
                     </div>
